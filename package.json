@@ -1,0 +1,33 @@
+{
+  "name": "vickrey",
+  "version": "0.0.1",
+  "description": "A simple second-price auction service.",
+  "main": "lib/server.js",
+  "scripts": {
+    "build": "babel src -d lib",
+    "flow": "flow"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bwestergard/vickrey.git"
+  },
+  "author": "Bjorn Westergard",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/bwestergard/vickrey/issues"
+  },
+  "homepage": "https://github.com/bwestergard/vickrey#readme",
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-flow": "^6.23.0",
+    "flow-bin": "^0.73.0",
+    "flow-typed": "^2.4.0"
+  },
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "express": "^4.16.3",
+    "express-promise-router": "^3.0.2",
+    "pg": "^7.4.3"
+  }
+}
