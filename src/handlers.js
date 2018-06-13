@@ -36,16 +36,16 @@ type Float = number
 // https://www.iab.com/wp-content/uploads/2016/11/OpenRTB-API-Specification-Version-2-5-DRAFT_2016-11.pdf
 type LossReasonCode = number
 
-type OpenrtbCommon<OpenrtbCommonExt,ResponseExt,RequestExt,SourceExt,OfferExt,ItemExt,SeatbidExt,BidExt,PmpExt,DealExt,Domain> = {| // DONE
+type OpenrtbCommon<OpenrtbCommonExt,ResponseExt,RequestExt,SourceExt,OfferExt,ItemExt,SeatbidExt,BidExt,PmpExt,DealExt,Domain> = $ReadOnly<{| // DONE
   ver: string,
   ext: OpenrtbCommonExt,
   domainspec?: string,
   domainver?: string,
   request?: Request<RequestExt,SourceExt,OfferExt,ItemExt,PmpExt,DealExt,Domain>,
   response?: Response<ResponseExt,SeatbidExt,BidExt,Domain>
-|}
+|}>
 
-type Request<RequestExt,SourceExt,OfferExt,ItemExt,PmpExt,DealExt,Domain> = {| // DONE
+type Request<RequestExt,SourceExt,OfferExt,ItemExt,PmpExt,DealExt,Domain> = $ReadOnly<{| // DONE
   id: string,
   offer: Offer<OfferExt,ItemExt,PmpExt,DealExt,Domain>,
   test?: ZeroOrOne, // 0 = live mode; 1 = test mode; default = 0
@@ -58,23 +58,23 @@ type Request<RequestExt,SourceExt,OfferExt,ItemExt,PmpExt,DealExt,Domain> = {| /
   source?: Source<SourceExt>,
   domain?: Domain,
   ext?: RequestExt
-|}
+|}>
 
-type Source<SourceExt> = {| // DONE
+type Source<SourceExt> = $ReadOnly<{| // DONE
   pchain: string, // Can potentially be parsed according to "TAG Payment ID Protocol."
   fd?: ZeroOrOne, // 0 = exchange; 1 = upstream
   tid?: string,
   ext?: SourceExt
-|}
+|}>
 
-type Offer<OfferExt,ItemExt,PmpExt,DealExt,Domain> = {| // DONE
+type Offer<OfferExt,ItemExt,PmpExt,DealExt,Domain> = $ReadOnly<{| // DONE
   item: Array<Item<ItemExt,PmpExt,DealExt,Domain>>,
   package?: ZeroOrOne,
   dburl?: Url,
   ext?: OfferExt
-|}
+|}>
 
-type Item<ItemExt,PmpExt,DealExt,Domain> = {| // DONE
+type Item<ItemExt,PmpExt,DealExt,Domain> = $ReadOnly<{| // DONE
   id: string,
   domain: Domain,
   qty?: Integer,
@@ -83,15 +83,15 @@ type Item<ItemExt,PmpExt,DealExt,Domain> = {| // DONE
   seq?: Integer,
   pmp?: Pmp<PmpExt,DealExt>,
   ext?: ItemExt
-|}
+|}>
 
-type Pmp<PmpExt,DealExt> = { // DONE
+type Pmp<PmpExt,DealExt> = $ReadOnly<{| // DONE
   private?: ZeroOrOne, // Obfuscated disjoint union
   deal?: Array<Deal<DealExt>>,
   ext?: PmpExt
-}
+|}>
 
-type Deal<DealExt> = {| // DONE
+type Deal<DealExt> = $ReadOnly<{| // DONE
   id: string,
   wadomain: string[],
   qty?: Integer,
@@ -100,9 +100,9 @@ type Deal<DealExt> = {| // DONE
   at?: 1 | 2 | 3, // Obfuscated disjoint union, meaning depends on flr
   seat?: string[],
   ext?: DealExt
-|}
+|}>
 
-type Response<ResponseExt,SeatbidExt,BidExt,Domain> = {| // DONE
+type Response<ResponseExt,SeatbidExt,BidExt,Domain> = $ReadOnly<{| // DONE
   id: string,
   bidid?: string,
   nbr?: LossReasonCode,
@@ -110,16 +110,16 @@ type Response<ResponseExt,SeatbidExt,BidExt,Domain> = {| // DONE
   cdata?: string,
   seatbid?: Array<Seatbid<SeatbidExt,BidExt,Domain>>,
   ext?: ResponseExt
-|}
+|}>
 
-type Seatbid<SeatbidExt,BidExt,Domain> = {|
-  bid: Array<Bid<BidExt,Domain>>,
-  seat?: string,
-  package?: ZeroOrOne,
-  ext?: SeatbidExt
-|}
+type Seatbid<SeatbidExt,BidExt,Domain> = $ReadOnly<{|
+  +bid: Array<Bid<BidExt,Domain>>,
+  +seat?: string,
+  +package?: ZeroOrOne,
+  +ext?: SeatbidExt
+|}>
 
-type Bid<BidExt,Domain> = {|
+type Bid<BidExt,Domain> = $ReadOnly<{|
   item: string,
   domain: Domain,
   price: Float,
@@ -130,7 +130,7 @@ type Bid<BidExt,Domain> = {|
   burl?: Url,
   lurl?: Url,
   ext?: BidExt
-|}
+|}>
 
 const extract$ZeroOrOne = (x: mixed): Result<0 | 1, ExtractionError> =>
 (x === 0 || x === 1) ? Ok(x) : exErr(`Expected 0 or 1, received ${JSON.stringify(x)}`)
@@ -160,9 +160,10 @@ const extract$Openrtbcommon = <
   exSourceExt: (x: mixed) => Result<SourceExt,ExtractionError>,
   exOfferExt: (x: mixed) => Result<OfferExt,ExtractionError>,
   exItemExt: (x: mixed) => Result<ItemExt,ExtractionError>,
-  exSeatbidExt: (x: mixed) => Result<ItemExt,ExtractionError>,
+  exSeatbidExt: (x: mixed) => Result<SeatbidExt,ExtractionError>,
   exBidExt: (x: mixed) => Result<BidExt,ExtractionError>,
-  exPmp: (x: mixed) => Result<Pmp<PmpExt,DealExt>,ExtractionError>,
+  exDealExt: (x: mixed) => Result<DealExt,ExtractionError>,
+  exPmpExt: (x: mixed) => Result<PmpExt,ExtractionError>,
   exDomain: (x: mixed) => Result<Domain,ExtractionError>
 ) => (x: mixed): Result<
   OpenrtbCommon<OpenrtbCommonExt,ResponseExt,RequestExt,SourceExt,OfferExt,ItemExt,SeatbidExt,BidExt,PmpExt,DealExt,Domain>,
@@ -218,7 +219,7 @@ andThen(
 
     if (obj.hasOwnProperty('request')) {
       const optField = extractFromKey(
-        extract$Request(exRequestExt, exSourceExt, exOfferExt, exItemExt, exDomain),
+        extract$Request(exRequestExt, exSourceExt, exOfferExt, exItemExt, exPmpExt, exDealExt, exDomain),
         'request',
         obj
       )
@@ -246,18 +247,19 @@ andThen(
 )
 
 const extract$Request =
-<RequestExt,SourceExt,OfferExt,ItemExt,Domain>(
+<RequestExt,SourceExt,OfferExt,ItemExt,PmpExt,DealExt,Domain>(
   exRequestExt: (x: mixed) => Result<RequestExt,ExtractionError>,
   exSourceExt: (x: mixed) => Result<SourceExt,ExtractionError>,
   exOfferExt: (x: mixed) => Result<OfferExt,ExtractionError>,
   exItemExt: (x: mixed) => Result<ItemExt,ExtractionError>,
+  exPmpExt: (x: mixed) => Result<PmpExt,ExtractionError>,
+  exDealExt: (x: mixed) => Result<DealExt,ExtractionError>,
   exDomain: (x: mixed) => Result<Domain,ExtractionError>
 ) =>
-(x: mixed): Result<Request<RequestExt,SourceExt,OfferExt,ItemExt,Domain>,ExtractionError> =>
+(x: mixed): Result<Request<RequestExt,SourceExt,OfferExt,ItemExt,PmpExt,DealExt,Domain>,ExtractionError> =>
 andThen(
   extractMixedObject(x),
   (obj) => {
-    // id: string,
     const reqField0 = extractFromKey(
       extractString,
       'id',
@@ -265,9 +267,8 @@ andThen(
     )
     if (reqField0.tag === 'Err') return reqField0
 
-    // offer: Offer<OfferExt,ItemExt>,
     const reqField1 = extractFromKey(
-      extract$Offer(exOfferExt,exItemExt),
+      extract$Offer(exOfferExt, exItemExt, exPmpExt, exDealExt, exDomain),
       'offer',
       obj
     )
@@ -399,7 +400,7 @@ andThen(
     // ext?: RequestExt
     if (obj.hasOwnProperty('ext')) {
       const optField = extractFromKey(
-        exDomain,
+        exRequestExt,
         'ext',
         obj
       )
@@ -415,17 +416,20 @@ andThen(
 )
 
 const extract$Offer =
-<OfferExt,ItemExt>(
+<OfferExt,ItemExt,PmpExt,DealExt,Domain>(
   exOfferExt: (x: mixed) => Result<OfferExt,ExtractionError>,
-  exItemExt: (x: mixed) => Result<ItemExt,ExtractionError>
+  exItemExt: (x: mixed) => Result<ItemExt,ExtractionError>,
+  exPmpExt: (x: mixed) => Result<PmpExt,ExtractionError>,
+  exDealExt: (x: mixed) => Result<DealExt,ExtractionError>,
+  exDomain: (x: mixed) => Result<Domain,ExtractionError>
 ) =>
-(x: mixed): Result<Offer<OfferExt,ItemExt>,ExtractionError> =>
+(x: mixed): Result<Offer<OfferExt,ItemExt,PmpExt,DealExt,Domain>,ExtractionError> =>
 andThen(
   extractMixedObject(x),
   (obj) => {
     //   item: Array<Item<ItemExt>>,
     const reqField0 = extractFromKey(
-      (x) => extractArrayOf(extract$Item(exItemExt), x),
+      (x) => extractArrayOf(extract$Item(exItemExt, exPmpExt, exDealExt, exDomain), x),
       'item',
       obj
     )
@@ -937,7 +941,7 @@ andThen(
   extractMixedObject(x),
   (obj) => {
     const reqField0 = extractFromKey(
-      (x) => extractArrayOf(extract$Bid(exBidExt,exDomain), x),
+      (x) => extractArrayOf(extract$Bid(exBidExt, exDomain), x),
       'bid',
       obj
     )
@@ -991,7 +995,7 @@ andThen(
 )
 
 const extract$Bid =
-<SeatbidExt,BidExt,Domain>(
+<BidExt,Domain>(
   exBidExt: (x: mixed) => Result<BidExt,ExtractionError>,
   exDomain: (x: mixed) => Result<Domain,ExtractionError>
 ) => (x: mixed): Result<Bid<BidExt,Domain>,ExtractionError> =>
