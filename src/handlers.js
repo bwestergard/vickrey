@@ -36,16 +36,23 @@ type Float = number
 // https://www.iab.com/wp-content/uploads/2016/11/OpenRTB-API-Specification-Version-2-5-DRAFT_2016-11.pdf
 type LossReasonCode = number
 
-type OpenrtbCommon<OpenrtbCommonExt,ResponseExt,RequestExt,SourceExt,OfferExt,ItemExt,SeatbidExt,BidExt,PmpExt,DealExt,Domain> = $ReadOnly<{| // DONE
+const example: OpenrtbCommon<null,null,null,null,null,null,null,null,null,null,null> = {
+  ver: '1.0',
+  ext: null,
+  request: {id: 'hello', offer: {item: []}},
+  response: {id: 'hello'}
+}
+
+type OpenrtbCommon<OpenrtbCommonExt,ResponseExt,RequestExt,SourceExt,OfferExt,ItemExt,SeatbidExt,BidExt,PmpExt,DealExt,Domain> = {| // DONE
   ver: string,
   ext: OpenrtbCommonExt,
   domainspec?: string,
   domainver?: string,
   request?: Request<RequestExt,SourceExt,OfferExt,ItemExt,PmpExt,DealExt,Domain>,
   response?: Response<ResponseExt,SeatbidExt,BidExt,Domain>
-|}>
+|}
 
-type Request<RequestExt,SourceExt,OfferExt,ItemExt,PmpExt,DealExt,Domain> = $ReadOnly<{| // DONE
+type Request<RequestExt,SourceExt,OfferExt,ItemExt,PmpExt,DealExt,Domain> = {| // DONE
   id: string,
   offer: Offer<OfferExt,ItemExt,PmpExt,DealExt,Domain>,
   test?: ZeroOrOne, // 0 = live mode; 1 = test mode; default = 0
@@ -58,23 +65,23 @@ type Request<RequestExt,SourceExt,OfferExt,ItemExt,PmpExt,DealExt,Domain> = $Rea
   source?: Source<SourceExt>,
   domain?: Domain,
   ext?: RequestExt
-|}>
+|}
 
-type Source<SourceExt> = $ReadOnly<{| // DONE
+type Source<SourceExt> = {| // DONE
   pchain: string, // Can potentially be parsed according to "TAG Payment ID Protocol."
   fd?: ZeroOrOne, // 0 = exchange; 1 = upstream
   tid?: string,
   ext?: SourceExt
-|}>
+|}
 
-type Offer<OfferExt,ItemExt,PmpExt,DealExt,Domain> = $ReadOnly<{| // DONE
+type Offer<OfferExt,ItemExt,PmpExt,DealExt,Domain> = {| // DONE
   item: Array<Item<ItemExt,PmpExt,DealExt,Domain>>,
   package?: ZeroOrOne,
   dburl?: Url,
   ext?: OfferExt
-|}>
+|}
 
-type Item<ItemExt,PmpExt,DealExt,Domain> = $ReadOnly<{| // DONE
+type Item<ItemExt,PmpExt,DealExt,Domain> = {| // DONE
   id: string,
   domain: Domain,
   qty?: Integer,
@@ -83,15 +90,15 @@ type Item<ItemExt,PmpExt,DealExt,Domain> = $ReadOnly<{| // DONE
   seq?: Integer,
   pmp?: Pmp<PmpExt,DealExt>,
   ext?: ItemExt
-|}>
+|}
 
-type Pmp<PmpExt,DealExt> = $ReadOnly<{| // DONE
+type Pmp<PmpExt,DealExt> = {| // DONE
   private?: ZeroOrOne, // Obfuscated disjoint union
   deal?: Array<Deal<DealExt>>,
   ext?: PmpExt
-|}>
+|}
 
-type Deal<DealExt> = $ReadOnly<{| // DONE
+type Deal<DealExt> = {| // DONE
   id: string,
   wadomain: string[],
   qty?: Integer,
@@ -100,9 +107,9 @@ type Deal<DealExt> = $ReadOnly<{| // DONE
   at?: 1 | 2 | 3, // Obfuscated disjoint union, meaning depends on flr
   seat?: string[],
   ext?: DealExt
-|}>
+|}
 
-type Response<ResponseExt,SeatbidExt,BidExt,Domain> = $ReadOnly<{| // DONE
+type Response<ResponseExt,SeatbidExt,BidExt,Domain> = {| // DONE
   id: string,
   bidid?: string,
   nbr?: LossReasonCode,
@@ -110,16 +117,16 @@ type Response<ResponseExt,SeatbidExt,BidExt,Domain> = $ReadOnly<{| // DONE
   cdata?: string,
   seatbid?: Array<Seatbid<SeatbidExt,BidExt,Domain>>,
   ext?: ResponseExt
-|}>
+|}
 
-type Seatbid<SeatbidExt,BidExt,Domain> = $ReadOnly<{|
+type Seatbid<SeatbidExt,BidExt,Domain> = {|
   +bid: Array<Bid<BidExt,Domain>>,
   +seat?: string,
   +package?: ZeroOrOne,
   +ext?: SeatbidExt
-|}>
+|}
 
-type Bid<BidExt,Domain> = $ReadOnly<{|
+type Bid<BidExt,Domain> = {|
   item: string,
   domain: Domain,
   price: Float,
@@ -130,7 +137,7 @@ type Bid<BidExt,Domain> = $ReadOnly<{|
   burl?: Url,
   lurl?: Url,
   ext?: BidExt
-|}>
+|}
 
 const extract$ZeroOrOne = (x: mixed): Result<0 | 1, ExtractionError> =>
 (x === 0 || x === 1) ? Ok(x) : exErr(`Expected 0 or 1, received ${JSON.stringify(x)}`)
@@ -1134,47 +1141,3 @@ andThen(
     return Ok(rec)
   }
 )
-
-// type SimpleRecord<T,U> = {
-//   t: T,
-//   u: U
-// }
-//
-// const extractSimpleRecord = <T,U>(
-//   exT: (x: mixed) => Result<T,ExtractionError>,
-//   exU: (x: mixed) => Result<U,ExtractionError>,
-// ) => (maybeSR: mixed): Result<SimpleRecord<T,U>,ExtractionError> =>
-// andThen(
-//   extractMixedObject(maybeSR),
-//   (obj) => {
-//     const resT = exT(obj.t)
-//     if (resT.tag === 'Err') return exErr('')
-//     const resU = exU(obj.u)
-//     if (resU.tag === 'Err') return exErr('')
-//
-//     return Ok({
-//       t: resT.data,
-//       u: resU.data
-//     })
-//   }
-// )
-//
-// const someEx = extractSimpleRecord(extractNumber, extractString)
-// const simpleRecRes = someEx({t: 'foo', u: 3})
-// if (simpleRecRes.tag === 'Ok') {
-//   const s: string = simpleRecRes.data.u
-// }
-//
-// type NestedArray<T> = Array<Array<T>>
-//
-// const extractNestedArray = <T>(
-//   exT: (x: mixed) => Result<T,ExtractionError>,
-//   x: mixed
-// ): Result<NestedArray<T>,ExtractionError> =>
-// extractArrayOf((x) => extractArrayOf(exT, x), x)
-//
-// const extractNestedArrayOfNumbers = (x: mixed) => extractNestedArray(extractNumber, x)
-// const arrayOfNumbersRes = extractNestedArrayOfNumbers('sfd')
-// if (arrayOfNumbersRes.tag === 'Ok') {
-//   const arrayOfNumbers: Array<Array<number>> = arrayOfNumbersRes.data
-// }
