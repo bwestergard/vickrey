@@ -36,13 +36,6 @@ type Float = number
 // https://www.iab.com/wp-content/uploads/2016/11/OpenRTB-API-Specification-Version-2-5-DRAFT_2016-11.pdf
 type LossReasonCode = number
 
-const example: OpenrtbCommon<null,null,null,null,null,null,null,null,null,null,null> = {
-  ver: '1.0',
-  ext: null,
-  request: {id: 'hello', offer: {item: []}},
-  response: {id: 'hello'}
-}
-
 type OpenrtbCommon<OpenrtbCommonExt,ResponseExt,RequestExt,SourceExt,OfferExt,ItemExt,SeatbidExt,BidExt,PmpExt,DealExt,Domain> = {| // DONE
   ver: string,
   ext: OpenrtbCommonExt,
@@ -139,6 +132,53 @@ type Bid<BidExt,Domain> = {|
   ext?: BidExt
 |}
 
+///
+
+const minimal: OpenrtbCommon<null,null,null,null,null,null,null,null,null,null,null> = {
+  ver: '1.0',
+  ext: null,
+}
+
+const exampleRequest: OpenrtbCommon<null,null,null,null,null,null,null,null,null,null,null> = {
+  ver: '1.0',
+  domainspec: 'panoply',
+  domainver: '0.0.1',
+  ext: null,
+  request: {
+    id: '2a34a2asdf3f4dsfjakldsjf2345234',
+    offer: {
+      item: [
+        {
+          id: 'foobar',
+          domain: null
+        }
+      ]
+    }
+  }
+}
+
+const largerExampleRequest: OpenrtbCommon<null,null,null,null,null,null,null,null,null,null,null> = {
+  ver: '1.0',
+  domainspec: 'panoply',
+  domainver: '0.0.1',
+  ext: null,
+  request: {
+    id: '2a34a2asdf3f4dsfjakldsjf2345234',
+    offer: {
+      item: [
+        {
+          id: 'foobar',
+          domain: null,
+          qty: 3,
+          flr: 1.25,
+          flrcur: 'USD'
+        }
+      ]
+    }
+  }
+}
+///
+
 const extract$ZeroOrOne = (x: mixed): Result<0 | 1, ExtractionError> =>
 (x === 0 || x === 1) ? Ok(x) : exErr(`Expected 0 or 1, received ${JSON.stringify(x)}`)
 
@@ -171,9 +211,8 @@ const extract$Openrtbcommon = <
   exBidExt: (x: mixed) => Result<BidExt,ExtractionError>,
   exDealExt: (x: mixed) => Result<DealExt,ExtractionError>,
   exPmpExt: (x: mixed) => Result<PmpExt,ExtractionError>,
-  exDomain: (x: mixed) => Result<Domain,ExtractionError>,
-  x: mixed
-): Result<
+  exDomain: (x: mixed) => Result<Domain,ExtractionError>
+) => (x: mixed): Result<
   OpenrtbCommon<OpenrtbCommonExt,ResponseExt,RequestExt,SourceExt,OfferExt,ItemExt,SeatbidExt,BidExt,PmpExt,DealExt,Domain>,
   ExtractionError
 > =>
