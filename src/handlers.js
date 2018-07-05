@@ -85,11 +85,11 @@ type Item<ItemExt,PmpExt,DealExt,Domain> = {| // DONE
   ext?: ItemExt
 |}
 
-type Pmp<PmpExt,DealExt> = { // DONE
+type Pmp<PmpExt,DealExt> = {| // DONE
   private?: ZeroOrOne, // Obfuscated disjoint union
   deal?: Array<Deal<DealExt>>,
   ext?: PmpExt
-}
+|}
 
 type Deal<DealExt> = {| // DONE
   id: string,
@@ -113,10 +113,10 @@ type Response<ResponseExt,SeatbidExt,BidExt,Domain> = {| // DONE
 |}
 
 type Seatbid<SeatbidExt,BidExt,Domain> = {|
-  bid: Array<Bid<BidExt,Domain>>,
-  seat?: string,
-  package?: ZeroOrOne,
-  ext?: SeatbidExt
+  +bid: Array<Bid<BidExt,Domain>>,
+  +seat?: string,
+  +package?: ZeroOrOne,
+  +ext?: SeatbidExt
 |}
 
 type Bid<BidExt,Domain> = {|
@@ -131,6 +131,53 @@ type Bid<BidExt,Domain> = {|
   lurl?: Url,
   ext?: BidExt
 |}
+
+///
+
+const minimal: OpenrtbCommon<null,null,null,null,null,null,null,null,null,null,null> = {
+  ver: '1.0',
+  ext: null,
+}
+
+const exampleRequest: OpenrtbCommon<null,null,null,null,null,null,null,null,null,null,null> = {
+  ver: '1.0',
+  domainspec: 'panoply',
+  domainver: '0.0.1',
+  ext: null,
+  request: {
+    id: '2a34a2asdf3f4dsfjakldsjf2345234',
+    offer: {
+      item: [
+        {
+          id: 'foobar',
+          domain: null
+        }
+      ]
+    }
+  }
+}
+
+const largerExampleRequest: OpenrtbCommon<null,null,null,null,null,null,null,null,null,null,null> = {
+  ver: '1.0',
+  domainspec: 'panoply',
+  domainver: '0.0.1',
+  ext: null,
+  request: {
+    id: '2a34a2asdf3f4dsfjakldsjf2345234',
+    offer: {
+      item: [
+        {
+          id: 'foobar',
+          domain: null,
+          qty: 3,
+          flr: 1.25,
+          flrcur: 'USD'
+        }
+      ]
+    }
+  }
+}
+///
 
 const extract$ZeroOrOne = (x: mixed): Result<0 | 1, ExtractionError> =>
 (x === 0 || x === 1) ? Ok(x) : exErr(`Expected 0 or 1, received ${JSON.stringify(x)}`)
@@ -160,9 +207,10 @@ const extract$Openrtbcommon = <
   exSourceExt: (x: mixed) => Result<SourceExt,ExtractionError>,
   exOfferExt: (x: mixed) => Result<OfferExt,ExtractionError>,
   exItemExt: (x: mixed) => Result<ItemExt,ExtractionError>,
-  exSeatbidExt: (x: mixed) => Result<ItemExt,ExtractionError>,
+  exSeatbidExt: (x: mixed) => Result<SeatbidExt,ExtractionError>,
   exBidExt: (x: mixed) => Result<BidExt,ExtractionError>,
-  exPmp: (x: mixed) => Result<Pmp<PmpExt,DealExt>,ExtractionError>,
+  exDealExt: (x: mixed) => Result<DealExt,ExtractionError>,
+  exPmpExt: (x: mixed) => Result<PmpExt,ExtractionError>,
   exDomain: (x: mixed) => Result<Domain,ExtractionError>
 ) => (x: mixed): Result<
   OpenrtbCommon<OpenrtbCommonExt,ResponseExt,RequestExt,SourceExt,OfferExt,ItemExt,SeatbidExt,BidExt,PmpExt,DealExt,Domain>,
@@ -218,7 +266,7 @@ andThen(
 
     if (obj.hasOwnProperty('request')) {
       const optField = extractFromKey(
-        extract$Request(exRequestExt, exSourceExt, exOfferExt, exItemExt, exDomain),
+        (x) => extract$Request(exRequestExt, exSourceExt, exOfferExt, exItemExt, exPmpExt, exDealExt, exDomain, x),
         'request',
         obj
       )
@@ -231,7 +279,7 @@ andThen(
 
     if (obj.hasOwnProperty('response')) {
       const optField = extractFromKey(
-        extract$Response(exResponseExt, exSeatbidExt, exBidExt, exDomain),
+        (x) => extract$Response(exResponseExt, exSeatbidExt, exBidExt, exDomain, x),
         'response',
         obj
       )
@@ -246,18 +294,19 @@ andThen(
 )
 
 const extract$Request =
-<RequestExt,SourceExt,OfferExt,ItemExt,Domain>(
+<RequestExt,SourceExt,OfferExt,ItemExt,PmpExt,DealExt,Domain>(
   exRequestExt: (x: mixed) => Result<RequestExt,ExtractionError>,
   exSourceExt: (x: mixed) => Result<SourceExt,ExtractionError>,
   exOfferExt: (x: mixed) => Result<OfferExt,ExtractionError>,
   exItemExt: (x: mixed) => Result<ItemExt,ExtractionError>,
-  exDomain: (x: mixed) => Result<Domain,ExtractionError>
-) =>
-(x: mixed): Result<Request<RequestExt,SourceExt,OfferExt,ItemExt,Domain>,ExtractionError> =>
+  exPmpExt: (x: mixed) => Result<PmpExt,ExtractionError>,
+  exDealExt: (x: mixed) => Result<DealExt,ExtractionError>,
+  exDomain: (x: mixed) => Result<Domain,ExtractionError>,
+  x: mixed
+): Result<Request<RequestExt,SourceExt,OfferExt,ItemExt,PmpExt,DealExt,Domain>,ExtractionError> =>
 andThen(
   extractMixedObject(x),
   (obj) => {
-    // id: string,
     const reqField0 = extractFromKey(
       extractString,
       'id',
@@ -265,9 +314,8 @@ andThen(
     )
     if (reqField0.tag === 'Err') return reqField0
 
-    // offer: Offer<OfferExt,ItemExt>,
     const reqField1 = extractFromKey(
-      extract$Offer(exOfferExt,exItemExt),
+      (x) => extract$Offer(exOfferExt, exItemExt, exPmpExt, exDealExt, exDomain, x),
       'offer',
       obj
     )
@@ -372,7 +420,7 @@ andThen(
     // source?: Source<SourceExt>,
     if (obj.hasOwnProperty('source')) {
       const optField = extractFromKey(
-        extract$Source(exSourceExt),
+        (x) => extract$Source(exSourceExt, x),
         'source',
         obj
       )
@@ -399,7 +447,7 @@ andThen(
     // ext?: RequestExt
     if (obj.hasOwnProperty('ext')) {
       const optField = extractFromKey(
-        exDomain,
+        exRequestExt,
         'ext',
         obj
       )
@@ -415,17 +463,20 @@ andThen(
 )
 
 const extract$Offer =
-<OfferExt,ItemExt>(
+<OfferExt,ItemExt,PmpExt,DealExt,Domain>(
   exOfferExt: (x: mixed) => Result<OfferExt,ExtractionError>,
-  exItemExt: (x: mixed) => Result<ItemExt,ExtractionError>
-) =>
-(x: mixed): Result<Offer<OfferExt,ItemExt>,ExtractionError> =>
+  exItemExt: (x: mixed) => Result<ItemExt,ExtractionError>,
+  exPmpExt: (x: mixed) => Result<PmpExt,ExtractionError>,
+  exDealExt: (x: mixed) => Result<DealExt,ExtractionError>,
+  exDomain: (x: mixed) => Result<Domain,ExtractionError>,
+  x: mixed
+): Result<Offer<OfferExt,ItemExt,PmpExt,DealExt,Domain>,ExtractionError> =>
 andThen(
   extractMixedObject(x),
   (obj) => {
     //   item: Array<Item<ItemExt>>,
     const reqField0 = extractFromKey(
-      (x) => extractArrayOf(extract$Item(exItemExt), x),
+      (x) => extractArrayOf((x) => extract$Item(exItemExt, exPmpExt, exDealExt, exDomain), x),
       'item',
       obj
     )
@@ -487,8 +538,9 @@ andThen(
 
 const extract$Source =
 <SourceExt>(
-  exSourceExt: (x: mixed) => Result<SourceExt,ExtractionError>
-) => (x: mixed): Result<Source<SourceExt>,ExtractionError> =>
+  exSourceExt: (x: mixed) => Result<SourceExt,ExtractionError>,
+  x: mixed
+): Result<Source<SourceExt>,ExtractionError> =>
 andThen(
   extractMixedObject(x),
   (obj) => {
@@ -556,7 +608,8 @@ const extract$Item =
   exPmpExt: (x: mixed) => Result<PmpExt,ExtractionError>,
   exDealExt: (x: mixed) => Result<DealExt,ExtractionError>,
   exDomain: (x: mixed) => Result<Domain,ExtractionError>,
-) => (x: mixed): Result<Item<ItemExt,PmpExt,DealExt,Domain>,ExtractionError> =>
+  x: mixed
+): Result<Item<ItemExt,PmpExt,DealExt,Domain>,ExtractionError> =>
 andThen(
   extractMixedObject(x),
   (obj) => {
@@ -633,7 +686,7 @@ andThen(
 
     if (obj.hasOwnProperty('pmp')) {
       const optField = extractFromKey(
-        extract$Pmp(exPmpExt, exDealExt),
+        (x) => extract$Pmp(exPmpExt, exDealExt, x),
         'pmp',
         obj
       )
@@ -665,8 +718,9 @@ andThen(
 const extract$Pmp =
 <PmpExt,DealExt>(
   exPmpExt: (x: mixed) => Result<PmpExt,ExtractionError>,
-  exDealExt: (x: mixed) => Result<DealExt,ExtractionError>
-) => (x: mixed): Result<Pmp<PmpExt,DealExt>,ExtractionError> =>
+  exDealExt: (x: mixed) => Result<DealExt,ExtractionError>,
+  x: mixed
+): Result<Pmp<PmpExt,DealExt>,ExtractionError> =>
 andThen(
   extractMixedObject(x),
   (obj) => {
@@ -687,7 +741,7 @@ andThen(
 
     if (obj.hasOwnProperty('deal')) {
       const optField = extractFromKey(
-        (x) => extractArrayOf(extract$Deal(exDealExt), x),
+        (x) => extractArrayOf((x) => extract$Deal(exDealExt, x), x),
         'deal',
         obj
       )
@@ -717,8 +771,9 @@ andThen(
 
 const extract$Deal =
 <DealExt>(
-  exDealExt: (x: mixed) => Result<DealExt,ExtractionError>
-) => (x: mixed): Result<Deal<DealExt>,ExtractionError> =>
+  exDealExt: (x: mixed) => Result<DealExt,ExtractionError>,
+  x: mixed
+): Result<Deal<DealExt>,ExtractionError> =>
 andThen(
   extractMixedObject(x),
   (obj) => {
@@ -828,9 +883,9 @@ const extract$Response =
   exResponseExt: (x: mixed) => Result<ResponseExt,ExtractionError>,
   exSeatbidExt: (x: mixed) => Result<SeatbidExt,ExtractionError>,
   exBidExt: (x: mixed) => Result<BidExt,ExtractionError>,
-  exDomain: (x: mixed) => Result<Domain,ExtractionError>
-) =>
-(x: mixed): Result<Response<ResponseExt,SeatbidExt,BidExt,Domain>,ExtractionError> =>
+  exDomain: (x: mixed) => Result<Domain,ExtractionError>,
+  x: mixed
+): Result<Response<ResponseExt,SeatbidExt,BidExt,Domain>,ExtractionError> =>
 andThen(
   extractMixedObject(x),
   (obj) => {
@@ -899,7 +954,10 @@ andThen(
 
     if (obj.hasOwnProperty('seatbid')) {
       const optField = extractFromKey(
-        extract$Seatbid(exSeatbidExt,exBidExt,exDomain),
+        (x) => extractArrayOf(
+          (x) => extract$Seatbid(exSeatbidExt, exBidExt, exDomain, x),
+          x
+        ),
         'seatbid',
         obj
       )
@@ -931,13 +989,14 @@ const extract$Seatbid =
 <SeatbidExt,BidExt,Domain>(
   exSeatbidExt: (x: mixed) => Result<SeatbidExt,ExtractionError>,
   exBidExt: (x: mixed) => Result<BidExt,ExtractionError>,
-  exDomain: (x: mixed) => Result<Domain,ExtractionError>
-) => (x: mixed): Result<Seatbid<SeatbidExt,BidExt,Domain>,ExtractionError> =>
+  exDomain: (x: mixed) => Result<Domain,ExtractionError>,
+  x: mixed
+): Result<Seatbid<SeatbidExt,BidExt,Domain>,ExtractionError> =>
 andThen(
   extractMixedObject(x),
   (obj) => {
     const reqField0 = extractFromKey(
-      (x) => extractArrayOf(extract$Bid(exBidExt,exDomain), x),
+      (x) => extractArrayOf((x) => extract$Bid(exBidExt, exDomain, x), x),
       'bid',
       obj
     )
@@ -991,10 +1050,11 @@ andThen(
 )
 
 const extract$Bid =
-<SeatbidExt,BidExt,Domain>(
+<BidExt,Domain>(
   exBidExt: (x: mixed) => Result<BidExt,ExtractionError>,
-  exDomain: (x: mixed) => Result<Domain,ExtractionError>
-) => (x: mixed): Result<Bid<BidExt,Domain>,ExtractionError> =>
+  exDomain: (x: mixed) => Result<Domain,ExtractionError>,
+  x: mixed
+): Result<Bid<BidExt,Domain>,ExtractionError> =>
 andThen(
   extractMixedObject(x),
   (obj) => {
